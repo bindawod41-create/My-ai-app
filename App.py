@@ -3,7 +3,7 @@ import g4f
 from PIL import Image
 
 # 1. إعدادات الصفحة
-st.set_page_config(page_title="منظومة أبو خليفة الذكية", page_icon="🤖", layout="wide")
+st.set_page_config(page_title="منظومة الذكية", page_icon="🤖", layout="wide")
 
 # 2. القائمة الجانبية لإدارة المهام والأقسام
 st.sidebar.title("🏢 إدارة المنظومة والشركات")
@@ -25,7 +25,7 @@ uploaded_file = st.sidebar.file_uploader("رفع صورة للتحليل:", type
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-st.title("🤖 منظومة أبو خليفة الذكية")
+st.title("🤖 منظومة الذكية")
 st.caption(f"الوضع الحالي: **{role}** (يعمل بشكل مباشر وبدون API)")
 
 # عرض المحادثات
