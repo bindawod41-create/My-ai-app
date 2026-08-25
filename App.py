@@ -52,13 +52,22 @@ if prompt := st.chat_input("اطلب ما تريد يا أبو خليفة..."):
         with st.spinner("جاري التفكير والرد..."):
             try:
                 # إرسال الطلب عبر محرك مجاني بدون API Key
-                response = g4f.ChatCompletion.create(
+                response = g4f.ChatCompletion.create(g4f.cookies_dir = "./har_and_cookies"
                     model=g4f.models.gpt_4o,
                     messages=[{"role": "user", "content": full_prompt}]
                 )
-                
+                * حدد الموفر صراحة ليكون **Blackbox** أو **DDG** لتتجنب خطأ Copilot/OpenaiChat:
+  ```python
+  provider=g4f.Provider.Blackbox
                 reply_text = str(response)
                 message_placeholder.markdown(reply_text)
                 st.session_state.messages.append({"role": "assistant", "content": reply_text})
             except Exception as e:
                 message_placeholder.error(f"حدث خطأ في الاتصال بالمحرك المجاني: {e}")
+uploaded_file = st.file_uploader(
+    "اختر صورة أو فيديو من الاستديو", type=["jpg", "png", "mp4"]
+)
+* **لإضافة التسجيل الصوتي:**
+  أضف أداة استقبال الصوت المدمجة:
+  ```python
+  audio_val = st.audio_input("سجل صوتك للتحدث مع البوت")
