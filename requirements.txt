@@ -1,3 +1,0 @@
-streamlit
-g4f
-pillow
