@@ -1,18 +1,11 @@
-import os
+from google import genai
 from PIL import Image
-import g4f
 import streamlit as st
 
-# 1. إعدادات الصفحة والمسارات
+# 1. إعدادات الصفحة
 st.set_page_config(page_title="منظومة الذكاء الاصطناعي", page_icon="🤖", layout="wide")
 
-# إنشاء مجلد الكوكيز تلقائياً لمنع أخطاء HAR
-cookies_dir = "./har_and_cookies"
-if not os.path.exists(cookies_dir):
-    os.makedirs(cookies_dir, exist_ok=True)
-g4f.cookies_dir = cookies_dir
-
-# 2. القائمة الجانبية وإدارة الأقسام
+# 2. القائمة الجانبية وإدارة الأقسام وإدخال مفتاح API
 st.sidebar.title("📊 إدارة المنظومة والشركات")
 role = st.sidebar.selectbox(
     "اختر وضع المساعد / الشركة:",
@@ -24,14 +17,23 @@ role = st.sidebar.selectbox(
     ],
 )
 
+# مفتاح Google Gemini API
+api_key = st.sidebar.text_input("أدخل مفتاح Gemini API:", type="password")
+
 st.title("🤖 منظومة الذكاء الاصطناعي التفاعلية")
 
-# 3. قسم رفع الملفات (صور وفيديوهات من المعرض)
-st.subheader("📁 رفع الوسائط من المعرض")
-uploaded_file = st.file_uploader(
-    "اختر صورة أو مقطع فيديو للتطوير والتحليل:",
-    type=["jpg", "jpeg", "png", "mp4", "mov"],
-)
+# 3. ميزة التحدث الصوتي ورفع الملفات
+st.subheader("🎙️ التحدث الصوتي ورفع الوسائط")
+col1, col2 = st.columns(2)
+
+with col1:
+    audio_input = st.audio_input("اضغط لتسجيل صوتك والتحدث مع البوت مباشرة")
+
+with col2:
+    uploaded_file = st.file_uploader(
+        "اختر صورة أو مقطع فيديو من المعرض:",
+        type=["jpg", "jpeg", "png", "mp4", "mov"],
+    )
 
 if uploaded_file is not None:
     if uploaded_file.type.startswith("image"):
@@ -40,61 +42,61 @@ if uploaded_file is not None:
     elif uploaded_file.type.startswith("video"):
         st.video(uploaded_file)
 
-# 4. إدارة سجل المحادثة (الذاكرة)
+# 4. إدارة الذاكرة وسجل المحادثة
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# عرض المحادثات السابقة
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-# 5. استقبال مربع النص وإرسال الطلب
-prompt = st.chat_input("اطلب ما تريد يا أبو خليفة...")
+# 5. معالجة النص والإدخال الصوتي
+user_prompt = st.chat_input("اطلب ما تريد يا أبو خليفة...")
 
-if prompt:
-    # عرض سؤال المستخدم
-    st.session_state.messages.append({"role": "user", "content": prompt})
-    with st.chat_message("user"):
-        st.markdown(prompt)
+# إذا قام المستخدم بالتسجيل الصوتي
+if audio_input and not user_prompt:
+    user_prompt = "تم إرسال تسجيل صوتي، يرجى الاستجابة والمساعدة."
 
-    # معالجة الطلب واستدعاء نموذج الذكاء الاصطناعي
-    with st.chat_message("assistant"):
-        with st.spinner("جاري التفكير والأجابة..."):
-            try:
-                # إعداد التعليمات البرمجية وتمرير الدور
-                system_instruction = (
-                    f"أنت مساعد ذكي في وضع: {role}. أجب بدقة ووضوح."
-                )
-                formatted_messages = [
-                    {"role": "system", "content": system_instruction}
-                ]
+if user_prompt:
+    if not api_key:
+        st.warning(
+            "يرجى إدخال مفتاح Gemini API في القائمة الجانبية لتشغيل الخدمة بنجاح."
+        )
+    else:
+        st.session_state.messages.append(
+            {"role": "user", "content": user_prompt}
+        )
+        with st.chat_message("user"):
+            st.markdown(user_prompt)
 
-                for msg in st.session_state.messages:
-                    formatted_messages.append(
-                        {"role": msg["role"], "content": msg["content"]}
+        with st.chat_message("assistant"):
+            with st.spinner("جاري التفكير والتحديث..."):
+                try:
+                    client = genai.Client(api_key=api_key)
+
+                    # إعداد السياق والذاكرة
+                    prompt_with_context = (
+                        f"أنت مساعد ذكي في وضع: {role}. الإجابة المباشرة: {user_prompt}"
                     )
 
-                # طلب الإجابة باستخدام موفر مستقر
-                response = g4f.ChatCompletion.create(
-                    model=g4f.models.gpt_4o,
-                    provider=g4f.Provider.Blackbox,
-                    messages=formatted_messages,
-                )
+                    response = client.models.generate_content(
+                        model="gemini-2.5-flash", contents=prompt_with_context
+                    )
 
-                # عرض الإجابة
-                st.markdown(response)
-                st.session_state.messages.append(
-                    {"role": "assistant", "content": response}
-                )
+                    st.markdown(response.text)
+                    st.session_state.messages.append(
+                        {"role": "assistant", "content": response.text}
+                    )
 
-                # تشغيل الصوت للرد (Text-to-Speech تلقائي)
-                tts_audio = f"""
-                <audio autoplay style="display:none;">
-                    <source src="https://translate.google.com/translate_tts?ie=UTF-8&q={response[:200]}&tl=ar&client=tw-ob" type="audio/mpeg">
-                </audio>
-                """
-                st.components.v1.html(tts_audio, height=0)
+                    # تشغيل الصوت لرد البوت تلقائياً
+                    tts_script = f"""
+                    <script>
+                    var msg = new SpeechSynthesisUtterance({repr(response.text[:200])});
+                    msg.lang = 'ar-SA';
+                    window.speechSynthesis.speak(msg);
+                    </script>
+                    """
+                    st.components.v1.html(tts_script, height=0)
 
-            except Exception as e:
-                st.error(f"حدث خطأ أثناء الاتصال: {e}")
+                except Exception as e:
+                    st.error(f"حدث خطأ أثناء الاتصال: {e}")
